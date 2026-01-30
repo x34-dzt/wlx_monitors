@@ -89,7 +89,7 @@ impl Dispatch<zwlr_output_head_v1::ZwlrOutputHeadV1, ()> for AppState {
         if opcode == 3 {
             qh.make_data::<zwlr_output_mode_v1::ZwlrOutputModeV1, _>(())
         } else {
-            unreachable!("");
+            unreachable!("unknown opcode for zwlr_output_head_v1")
         }
     }
 }
