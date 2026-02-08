@@ -41,7 +41,7 @@ enum ConfigResult {
 }
 
 pub struct WlMonitorManager {
-    conn: Connection,
+    _conn: Connection,
     emitter: SyncSender<WlMonitorEvent>,
     monitors: HashMap<ObjectId, WlMonitor>,
     mode_monitor: HashMap<ObjectId, ObjectId>,
@@ -52,13 +52,14 @@ pub struct WlMonitorManager {
     config_result: ConfigResult,
 }
 
-enum WlMonitorManagerError {
+#[derive(Debug)]
+pub enum WlMonitorManagerError {
     ConnectionError(String),
     EventQueueError(String),
 }
 
 impl WlMonitorManager {
-    fn new_connection(
+    pub fn new_connection(
         emitter: SyncSender<WlMonitorEvent>,
         controller: Receiver<WlMonitorAction>,
     ) -> Result<(Self, EventQueue<Self>), WlMonitorManagerError> {
@@ -72,7 +73,7 @@ impl WlMonitorManager {
         display_object.get_registry(&queue_handler, ());
 
         let state = WlMonitorManager {
-            conn,
+            _conn: conn,
             emitter,
             monitors: HashMap::new(),
             mode_monitor: HashMap::new(),
@@ -86,12 +87,12 @@ impl WlMonitorManager {
         Ok((state, event_queue))
     }
 
-    fn run(
-        &mut self,
+    pub fn run(
+        mut self,
         mut eq: EventQueue<Self>,
     ) -> Result<(), WlMonitorManagerError> {
         loop {
-            eq.blocking_dispatch(self).map_err(|e| {
+            eq.blocking_dispatch(&mut self).map_err(|e| {
                 WlMonitorManagerError::EventQueueError(e.to_string())
             })?;
             self.flush_changed();

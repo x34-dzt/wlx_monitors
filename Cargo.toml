@@ -3,6 +3,10 @@ name = "wayland-monitor-detector"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "wlx_monitors"
+path = "src/lib.rs"
+
 [[example]]
 name = "monitor_info"
 path = "examples/monitor_info.rs"
