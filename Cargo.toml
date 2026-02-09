@@ -1,5 +1,5 @@
 [package]
-name = "wayland-monitor-detector"
+name =  "wlx_monitors"
 version = "0.1.0"
 edition = "2024"
 
@@ -15,3 +15,4 @@ path = "examples/monitor_info.rs"
 wayland-client = "0.31.12"
 wayland-protocols-wlr = {  version = "0.3.10", features = ["client"] }
 wayland-protocols = { version = "0.32.10", features = ["client"] }
+rustix = { version = "1", features = [ "event", "time" ] }

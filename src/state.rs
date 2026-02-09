@@ -28,8 +28,15 @@ pub enum WlMonitorEvent {
 }
 
 pub enum WlMonitorAction {
-    Toggle { name: String },
-    SwitchMode { name: String, width: i32, height: i32, refresh_rate: i32 },
+    Toggle {
+        name: String,
+    },
+    SwitchMode {
+        name: String,
+        width: i32,
+        height: i32,
+        refresh_rate: i32,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -92,7 +99,23 @@ impl WlMonitorManager {
         mut eq: EventQueue<Self>,
     ) -> Result<(), WlMonitorManagerError> {
         loop {
-            eq.blocking_dispatch(&mut self).map_err(|e| {
+            eq.flush().map_err(|e| {
+                WlMonitorManagerError::EventQueueError(e.to_string())
+            })?;
+
+            let guard = eq.prepare_read().unwrap();
+            let fd = guard.connection_fd();
+            let mut poll_fd = [rustix::event::PollFd::new(
+                &fd,
+                rustix::event::PollFlags::IN,
+            )];
+            let timeout = rustix::time::Timespec {
+                tv_sec: 0,
+                tv_nsec: 50_000_000,
+            };
+            let _ = rustix::event::poll(&mut poll_fd, Some(&timeout));
+            let _ = guard.read();
+            eq.dispatch_pending(&mut self).map_err(|e| {
                 WlMonitorManagerError::EventQueueError(e.to_string())
             })?;
             self.flush_changed();
@@ -110,7 +133,8 @@ impl WlMonitorManager {
         for monitor in self.monitors.values_mut() {
             if monitor.changed {
                 monitor.changed = false;
-                let _ = self.emitter.send(WlMonitorEvent::Changed(monitor.clone()));
+                let _ =
+                    self.emitter.send(WlMonitorEvent::Changed(monitor.clone()));
             }
         }
     }
@@ -124,7 +148,9 @@ impl WlMonitorManager {
             WlMonitorManagerError::EventQueueError("no serial available".into())
         })?;
         let manager = self.zwlr_manager.as_ref().ok_or_else(|| {
-            WlMonitorManagerError::EventQueueError("no manager available".into())
+            WlMonitorManagerError::EventQueueError(
+                "no manager available".into(),
+            )
         })?;
 
         let qh = eq.handle();
@@ -134,8 +160,20 @@ impl WlMonitorManager {
             WlMonitorAction::Toggle { ref name } => {
                 self.configure_toggle(&config, name, &qh);
             }
-            WlMonitorAction::SwitchMode { ref name, width, height, refresh_rate } => {
-                self.configure_switch_mode(&config, name, width, height, refresh_rate, &qh);
+            WlMonitorAction::SwitchMode {
+                ref name,
+                width,
+                height,
+                refresh_rate,
+            } => {
+                self.configure_switch_mode(
+                    &config,
+                    name,
+                    width,
+                    height,
+                    refresh_rate,
+                    &qh,
+                );
             }
         }
 
@@ -152,7 +190,9 @@ impl WlMonitorManager {
         name: &str,
         qh: &QueueHandle<Self>,
     ) {
-        let target_enabled = self.monitors.values()
+        let target_enabled = self
+            .monitors
+            .values()
             .find(|m| m.name == name)
             .map(|m| m.enabled)
             .unwrap_or(false);
@@ -163,7 +203,10 @@ impl WlMonitorManager {
                     config.disable_head(&monitor.head);
                 } else {
                     let config_head = config.enable_head(&monitor.head, qh, ());
-                    if let Some(mode) = monitor.modes.iter().find(|m| m.preferred)
+                    if let Some(mode) = monitor
+                        .modes
+                        .iter()
+                        .find(|m| m.preferred)
                         .or_else(|| monitor.modes.first())
                     {
                         config_head.set_mode(&mode.proxy);
@@ -195,7 +238,8 @@ impl WlMonitorManager {
                     config_head.set_mode(&mode.proxy);
                 }
                 if monitor.enabled {
-                    config_head.set_position(monitor.position.x, monitor.position.y);
+                    config_head
+                        .set_position(monitor.position.x, monitor.position.y);
                     if let WEnum::Value(t) = monitor.transform {
                         config_head.set_transform(t);
                     }
@@ -241,12 +285,16 @@ impl WlMonitorManager {
         }
         match self.config_result {
             ConfigResult::Succeeded => Ok(()),
-            ConfigResult::Failed => Err(WlMonitorManagerError::EventQueueError(
-                "compositor rejected the configuration".into(),
-            )),
-            ConfigResult::Cancelled => Err(WlMonitorManagerError::EventQueueError(
-                "configuration cancelled (serial outdated)".into(),
-            )),
+            ConfigResult::Failed => {
+                Err(WlMonitorManagerError::EventQueueError(
+                    "compositor rejected the configuration".into(),
+                ))
+            }
+            ConfigResult::Cancelled => {
+                Err(WlMonitorManagerError::EventQueueError(
+                    "configuration cancelled (serial outdated)".into(),
+                ))
+            }
             ConfigResult::Idle => unreachable!(),
         }
     }
@@ -268,7 +316,12 @@ impl Dispatch<wl_registry::WlRegistry, ()> for WlMonitorManager {
         } = event
             && interface == ZwlrOutputManagerV1::interface().name
         {
-            let bound = registry.bind::<ZwlrOutputManagerV1, _, _>(name, version, qh, ());
+            let bound = registry.bind::<ZwlrOutputManagerV1, _, _>(
+                name,
+                version,
+                qh,
+                (),
+            );
             state.zwlr_manager = Some(bound);
         }
     }
@@ -311,7 +364,9 @@ impl Dispatch<ZwlrOutputManagerV1, ()> for WlMonitorManager {
                 if !state.initialized {
                     state.initialized = true;
                     let monitors = state.monitors.values().cloned().collect();
-                    let _ = state.emitter.send(WlMonitorEvent::InitialState(monitors));
+                    let _ = state
+                        .emitter
+                        .send(WlMonitorEvent::InitialState(monitors));
                 }
             }
             _ => {}
@@ -435,7 +490,9 @@ impl Dispatch<ZwlrOutputModeV1, ()> for WlMonitorManager {
         let Some(monitor) = state.monitors.get_mut(monitor_id) else {
             return;
         };
-        let Some(mode) = monitor.modes.iter_mut().find(|m| m.mode_id == mode_id) else {
+        let Some(mode) =
+            monitor.modes.iter_mut().find(|m| m.mode_id == mode_id)
+        else {
             return;
         };
         match event {
