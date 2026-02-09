@@ -175,7 +175,7 @@ Each `WlMonitor` provides:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourname/wlx_monitors
+git clone https://github.com/x34-dzt/wlx_monitors
 cd wlx_monitors
 
 # Build
