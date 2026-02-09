@@ -37,8 +37,23 @@ pub struct WlMonitorMode {
     pub resolution: WlResolution,
     /// Whether this is the preferred mode for the monitor
     pub preferred: bool,
+    /// Whether this is the currently active mode
+    pub is_current: bool,
     /// Internal Wayland proxy object for this mode
     pub proxy: ZwlrOutputModeV1,
+}
+
+impl std::fmt::Debug for WlMonitorMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WlMonitorMode")
+            .field("mode_id", &self.mode_id)
+            .field("head_id", &self.head_id)
+            .field("refresh_rate", &self.refresh_rate)
+            .field("resolution", &self.resolution)
+            .field("preferred", &self.preferred)
+            .field("is_current", &self.is_current)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Represents a connected monitor/display
@@ -74,4 +89,24 @@ pub struct WlMonitor {
     pub head: ZwlrOutputHeadV1,
     /// Internal flag indicating if the monitor state has changed
     pub changed: bool,
+}
+
+impl std::fmt::Debug for WlMonitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WlMonitor")
+            .field("head_id", &self.head_id)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("make", &self.make)
+            .field("model", &self.model)
+            .field("serial_number", &self.serial_number)
+            .field("modes", &self.modes)
+            .field("resolution", &self.resolution)
+            .field("position", &self.position)
+            .field("scale", &self.scale)
+            .field("enabled", &self.enabled)
+            .field("transform", &self.transform)
+            .field("changed", &self.changed)
+            .finish_non_exhaustive()
+    }
 }

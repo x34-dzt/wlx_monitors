@@ -28,14 +28,19 @@ fn main() {
                     println!("    scale: {}", monitor.scale);
                     println!("    modes:");
                     for mode in &monitor.modes {
-                        let preferred =
-                            if mode.preferred { " (preferred)" } else { "" };
+                        let mut flags = String::new();
+                        if mode.preferred {
+                            flags.push_str(" (preferred)");
+                        }
+                        if mode.is_current {
+                            flags.push_str(" [CURRENT]");
+                        }
                         println!(
                             "      {}x{} @ {}Hz{}",
                             mode.resolution.width,
                             mode.resolution.height,
                             mode.refresh_rate,
-                            preferred,
+                            flags,
                         );
                     }
                     println!();
