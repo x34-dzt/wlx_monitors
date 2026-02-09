@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "wlx_monitors"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rustix",
  "wayland-client",
