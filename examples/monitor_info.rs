@@ -21,11 +21,15 @@ fn main() {
                 for monitor in &monitors {
                     println!("  {} ({})", monitor.name, monitor.description);
                     println!("    enabled: {}", monitor.enabled);
-                    println!("    position: ({}, {})", monitor.position.x, monitor.position.y);
+                    println!(
+                        "    position: ({}, {})",
+                        monitor.position.x, monitor.position.y
+                    );
                     println!("    scale: {}", monitor.scale);
                     println!("    modes:");
                     for mode in &monitor.modes {
-                        let preferred = if mode.preferred { " (preferred)" } else { "" };
+                        let preferred =
+                            if mode.preferred { " (preferred)" } else { "" };
                         println!(
                             "      {}x{} @ {}Hz{}",
                             mode.resolution.width,
