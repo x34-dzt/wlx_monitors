@@ -475,6 +475,7 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for WlMonitorManager {
                 refresh_rate: 0,
                 resolution: WlResolution::default(),
                 preferred: false,
+                is_current: false,
                 proxy: mode.clone(),
             });
             return;
@@ -500,7 +501,10 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for WlMonitorManager {
                 monitor.enabled = enabled != 0;
             }
             zwlr_output_head_v1::Event::CurrentMode { mode } => {
-                monitor.current_mode = Some(mode);
+                monitor.current_mode = Some(mode.clone());
+                for m in &mut monitor.modes {
+                    m.is_current = m.mode_id == mode.id();
+                }
             }
             zwlr_output_head_v1::Event::Position { x, y } => {
                 monitor.position = WlPosition { x, y };
