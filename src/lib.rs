@@ -26,4 +26,6 @@ pub use state::{
     ActionKind, WlMonitorAction, WlMonitorEvent, WlMonitorManager,
     WlMonitorManagerError,
 };
-pub use wl_monitor::{WlMonitor, WlMonitorMode, WlPosition, WlResolution};
+pub use wl_monitor::{
+    WlMonitor, WlMonitorMode, WlPosition, WlResolution, WlTransform,
+};

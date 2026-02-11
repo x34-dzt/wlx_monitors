@@ -12,7 +12,7 @@ A Rust library for detecting and managing display outputs on Wayland using the `
 
 - **Detect** connected monitors and their properties (resolution, refresh rate, position, scale)
 - **Monitor** for display hotplug events (monitor connected/disconnected)
-- **Control** display outputs (enable/disable, change resolution/refresh rate)
+- **Control** display outputs (enable/disable, change resolution/refresh rate, scale, and transform/rotation)
 
 Works with wlroots-based Wayland compositors (Sway, Hyprland, River, dwl, etc.) that implement the `zwlr_output_manager_v1` protocol.
 
@@ -99,6 +99,8 @@ Send control actions through another MPSC channel:
 
 - `WlMonitorAction::Toggle { name, mode }` - Enable/disable a monitor by name. The `mode: Option<(i32, i32, i32)>` lets users optionally specify a custom `(width, height, refresh_rate)` when toggling a monitor back on. If `None`, the smart mode resolution kicks in (last mode > preferred > first available).
 - `WlMonitorAction::SwitchMode { name, width, height, refresh_rate }` - Change a monitor's mode
+- `WlMonitorAction::SetScale { name, scale }` - Set a monitor's scale factor (must be > 0, e.g., 1.0, 1.5, 2.0)
+- `WlMonitorAction::SetTransform { name, transform }` - Set a monitor's rotation/orientation (Normal, Rotate90, Rotate180, Rotate270, Flipped, etc.)
 
 ### Threading Model
 
@@ -145,6 +147,8 @@ pub enum WlMonitorEvent {
 pub enum WlMonitorAction {
     Toggle { name: String, mode: Option<(i32, i32, i32)> },    // On/off with optional custom mode
     SwitchMode { name: String, width: i32, height: i32, refresh_rate: i32 },
+    SetScale { name: String, scale: f64 },                      // Set scale factor
+    SetTransform { name: String, transform: Transform },        // Set rotation/flip
 }
 ```
 
@@ -224,7 +228,20 @@ fn main() {
         height: 1080,
         refresh_rate: 60,
     }).unwrap();
-    
+
+    // Example: Set scale factor
+    action_tx.send(WlMonitorAction::SetScale {
+        name: "DP-1".to_string(),
+        scale: 1.5,
+    }).unwrap();
+
+    // Example: Rotate a monitor
+    use wlx_monitors::Transform;
+    action_tx.send(WlMonitorAction::SetTransform {
+        name: "DP-1".to_string(),
+        transform: Transform::Rotate90,
+    }).unwrap();
+
     // Process events
     while let Ok(event) = event_rx.recv() {
         match event {
