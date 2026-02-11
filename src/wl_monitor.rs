@@ -1,10 +1,54 @@
 use wayland_client::{
-    WEnum, backend::ObjectId, protocol::wl_output::Transform,
+    backend::ObjectId,
+    protocol::wl_output::Transform,
+    WEnum,
 };
 use wayland_protocols_wlr::output_management::v1::client::{
     zwlr_output_head_v1::ZwlrOutputHeadV1,
     zwlr_output_mode_v1::ZwlrOutputModeV1,
 };
+
+/// Monitor transform (rotation/flip)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WlTransform {
+    Normal,
+    Rotate90,
+    Rotate180,
+    Rotate270,
+    Flipped,
+    Flipped90,
+    Flipped180,
+    Flipped270,
+}
+
+impl WlTransform {
+    pub(crate) fn from_wayland(t: WEnum<Transform>) -> Self {
+        match t {
+            WEnum::Value(Transform::Normal) => Self::Normal,
+            WEnum::Value(Transform::_90) => Self::Rotate90,
+            WEnum::Value(Transform::_180) => Self::Rotate180,
+            WEnum::Value(Transform::_270) => Self::Rotate270,
+            WEnum::Value(Transform::Flipped) => Self::Flipped,
+            WEnum::Value(Transform::Flipped90) => Self::Flipped90,
+            WEnum::Value(Transform::Flipped180) => Self::Flipped180,
+            WEnum::Value(Transform::Flipped270) => Self::Flipped270,
+            _ => Self::Normal,
+        }
+    }
+
+    pub(crate) fn to_wayland(self) -> Transform {
+        match self {
+            Self::Normal => Transform::Normal,
+            Self::Rotate90 => Transform::_90,
+            Self::Rotate180 => Transform::_180,
+            Self::Rotate270 => Transform::_270,
+            Self::Flipped => Transform::Flipped,
+            Self::Flipped90 => Transform::Flipped90,
+            Self::Flipped180 => Transform::Flipped180,
+            Self::Flipped270 => Transform::Flipped270,
+        }
+    }
+}
 
 /// Represents the resolution of a monitor mode
 #[derive(Default, Clone, Debug)]
@@ -84,7 +128,7 @@ pub struct WlMonitor {
     /// Currently active mode (if any)
     pub current_mode: Option<ZwlrOutputModeV1>,
     /// Current transformation (normal, rotated, flipped, etc.)
-    pub transform: WEnum<Transform>,
+    pub transform: WlTransform,
     /// Internal Wayland head proxy object
     pub head: ZwlrOutputHeadV1,
     /// Internal flag indicating if the monitor state has changed
