@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 
-use wlx_monitors::{WlMonitorAction, WlMonitorEvent, WlMonitorManager};
+use wlx_monitors::{WlMonitorEvent, WlMonitorManager};
 
 fn main() {
     let (event_tx, event_rx) = mpsc::sync_channel(16);

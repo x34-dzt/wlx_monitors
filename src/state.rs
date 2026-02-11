@@ -25,8 +25,8 @@ use crate::wl_monitor::{WlMonitor, WlMonitorMode, WlPosition, WlResolution};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActionKind {
     Toggle,
-    SwitchMode,
     ConfigApply,
+    SwitchMode,
 }
 
 /// Events emitted by the Wayland monitor manager
@@ -277,7 +277,9 @@ impl WlMonitorManager {
 
         // Save last_mode before the main loop so the mutable borrow is scoped separately
         if target_enabled {
-            if let Some(monitor) = self.monitors.values_mut().find(|m| m.name == name) {
+            if let Some(monitor) =
+                self.monitors.values_mut().find(|m| m.name == name)
+            {
                 if let Some(current_mode) = &monitor.current_mode {
                     monitor.last_mode = Some(current_mode.id());
                 }
@@ -486,6 +488,7 @@ impl Dispatch<ZwlrOutputManagerV1, ()> for WlMonitorManager {
                 state.serial = Some(serial);
                 if !state.initialized {
                     state.initialized = true;
+
                     let monitors = state.monitors.values().cloned().collect();
                     let _ = state
                         .emitter
@@ -565,7 +568,7 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for WlMonitorManager {
                 monitor.serial_number = serial_number;
             }
             zwlr_output_head_v1::Event::Enabled { enabled } => {
-                monitor.enabled = enabled != 0;
+                monitor.enabled = enabled != 0
             }
             zwlr_output_head_v1::Event::CurrentMode { mode } => {
                 monitor.current_mode = Some(mode.clone());
