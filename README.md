@@ -22,7 +22,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wlx_monitors = "0.1.0"
+wlx_monitors = "0.1.3"
 ```
 
 Basic usage:
@@ -66,6 +66,9 @@ fn main() {
             WlMonitorEvent::Removed { name, .. } => {
                 println!("Monitor {} disconnected", name);
             }
+            WlMonitorEvent::ActionFailed { action, reason } => {
+                eprintln!("Action {:?} failed: {}", action, reason);
+            }
         }
     }
 }
@@ -88,12 +91,13 @@ The library sends events through an MPSC channel:
 - `WlMonitorEvent::InitialState(Vec<WlMonitor>)` - Sent once with all currently connected monitors
 - `WlMonitorEvent::Changed(Box<WlMonitor>)` - Sent when a monitor's properties change
 - `WlMonitorEvent::Removed { id, name }` - Sent when a monitor is disconnected
+- `WlMonitorEvent::ActionFailed { action, reason }` - Sent when an action fails (e.g., invalid mode)
 
 ### Actions (Your App → Wayland)
 
 Send control actions through another MPSC channel:
 
-- `WlMonitorAction::Toggle { name }` - Enable/disable a monitor by name
+- `WlMonitorAction::Toggle { name, mode }` - Enable/disable a monitor by name. The `mode: Option<(i32, i32, i32)>` lets users optionally specify a custom `(width, height, refresh_rate)` when toggling a monitor back on. If `None`, the smart mode resolution kicks in (last mode > preferred > first available).
 - `WlMonitorAction::SwitchMode { name, width, height, refresh_rate }` - Change a monitor's mode
 
 ### Threading Model
@@ -131,6 +135,7 @@ pub enum WlMonitorEvent {
     InitialState(Vec<WlMonitor>),           // All monitors at startup
     Changed(Box<WlMonitor>),                // Monitor properties changed
     Removed { id: ObjectId, name: String }, // Monitor disconnected
+    ActionFailed { action: ActionKind, reason: String }, // Action failed
 }
 ```
 
@@ -138,7 +143,7 @@ pub enum WlMonitorEvent {
 
 ```rust
 pub enum WlMonitorAction {
-    Toggle { name: String },                                    // On/off
+    Toggle { name: String, mode: Option<(i32, i32, i32)> },    // On/off with optional custom mode
     SwitchMode { name: String, width: i32, height: i32, refresh_rate: i32 },
 }
 ```
@@ -208,7 +213,8 @@ fn main() {
     
     // Example: Toggle a monitor
     action_tx.send(WlMonitorAction::Toggle {
-        name: "DP-1".to_string()
+        name: "DP-1".to_string(),
+        mode: None,
     }).unwrap();
     
     // Example: Switch resolution
