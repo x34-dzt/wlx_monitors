@@ -7,9 +7,9 @@ use std::{
 };
 
 use wayland_client::{
-    Connection, Dispatch, EventQueue, Proxy, QueueHandle, WEnum,
+    Connection, Dispatch, EventQueue, Proxy, QueueHandle,
     backend::ObjectId,
-    protocol::{wl_output::Transform, wl_registry},
+    protocol::wl_registry,
 };
 use wayland_protocols_wlr::output_management::v1::client::{
     zwlr_output_configuration_head_v1::{self, ZwlrOutputConfigurationHeadV1},
@@ -19,7 +19,9 @@ use wayland_protocols_wlr::output_management::v1::client::{
     zwlr_output_mode_v1::{self, ZwlrOutputModeV1},
 };
 
-use crate::wl_monitor::{WlMonitor, WlMonitorMode, WlPosition, WlResolution};
+use crate::wl_monitor::{
+    WlMonitor, WlMonitorMode, WlPosition, WlResolution, WlTransform,
+};
 
 /// The kind of action that failed
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,6 +29,8 @@ pub enum ActionKind {
     Toggle,
     ConfigApply,
     SwitchMode,
+    SetScale,
+    SetTransform,
 }
 
 /// Events emitted by the Wayland monitor manager
@@ -61,6 +65,20 @@ pub enum WlMonitorAction {
         height: i32,
         /// Desired refresh rate in Hz
         refresh_rate: i32,
+    },
+    /// Set a monitor's scale factor
+    SetScale {
+        /// Name of the monitor to configure (e.g., "DP-1")
+        name: String,
+        /// Scale factor to apply (must be > 0, e.g., 1.0, 1.5, 2.0)
+        scale: f64,
+    },
+    /// Set a monitor's transform (rotation/flip)
+    SetTransform {
+        /// Name of the monitor to configure (e.g., "DP-1")
+        name: String,
+        /// The desired transform
+        transform: WlTransform,
     },
 }
 
@@ -244,6 +262,20 @@ impl WlMonitorManager {
                     &qh,
                 );
             }
+            WlMonitorAction::SetScale {
+                ref name,
+                scale,
+            } => {
+                self.configure_set_scale(&config, name, scale, &qh);
+            }
+            WlMonitorAction::SetTransform {
+                ref name,
+                transform,
+            } => {
+                self.configure_set_transform(
+                    &config, name, transform, &qh,
+                );
+            }
         }
 
         config.apply();
@@ -318,9 +350,7 @@ impl WlMonitorManager {
                 let head = config.enable_head(&monitor.head, qh, ());
                 head.set_mode(&target_mode.proxy);
                 head.set_position(monitor.position.x, monitor.position.y);
-                if let WEnum::Value(t) = monitor.transform {
-                    head.set_transform(t);
-                }
+                head.set_transform(monitor.transform.to_wayland());
                 head.set_scale(monitor.scale);
             } else {
                 let _ = self.emitter.send(WlMonitorEvent::ActionFailed {
@@ -358,9 +388,7 @@ impl WlMonitorManager {
                 config_head.set_mode(&mode.proxy);
                 config_head
                     .set_position(monitor.position.x, monitor.position.y);
-                if let WEnum::Value(t) = monitor.transform {
-                    config_head.set_transform(t);
-                }
+                config_head.set_transform(monitor.transform.to_wayland());
                 config_head.set_scale(monitor.scale);
             } else {
                 self.preserve_head(config, monitor, qh);
@@ -372,6 +400,90 @@ impl WlMonitorManager {
                     ),
                 });
             }
+        }
+    }
+
+    fn configure_set_scale(
+        &self,
+        config: &ZwlrOutputConfigurationV1,
+        name: &str,
+        scale: f64,
+        qh: &QueueHandle<Self>,
+    ) {
+        if !scale.is_finite() || scale <= 0.0 {
+            let _ = self.emitter.send(WlMonitorEvent::ActionFailed {
+                action: ActionKind::SetScale,
+                reason: format!(
+                    "Invalid scale value '{}': must be finite and > 0",
+                    scale
+                ),
+            });
+            for monitor in self.monitors.values() {
+                self.preserve_head(config, monitor, qh);
+            }
+            return;
+        }
+
+        for monitor in self.monitors.values() {
+            if monitor.name != name {
+                self.preserve_head(config, monitor, qh);
+                continue;
+            }
+
+            if !monitor.enabled {
+                self.preserve_head(config, monitor, qh);
+                let _ = self.emitter.send(WlMonitorEvent::ActionFailed {
+                    action: ActionKind::SetScale,
+                    reason: format!(
+                        "Monitor '{}' is disabled, cannot set scale",
+                        name
+                    ),
+                });
+                continue;
+            }
+
+            let config_head = config.enable_head(&monitor.head, qh, ());
+            if let Some(ref current_mode) = monitor.current_mode {
+                config_head.set_mode(current_mode);
+            }
+            config_head.set_position(monitor.position.x, monitor.position.y);
+            config_head.set_transform(monitor.transform.to_wayland());
+            config_head.set_scale(scale);
+        }
+    }
+
+    fn configure_set_transform(
+        &self,
+        config: &ZwlrOutputConfigurationV1,
+        name: &str,
+        transform: WlTransform,
+        qh: &QueueHandle<Self>,
+    ) {
+        for monitor in self.monitors.values() {
+            if monitor.name != name {
+                self.preserve_head(config, monitor, qh);
+                continue;
+            }
+
+            if !monitor.enabled {
+                self.preserve_head(config, monitor, qh);
+                let _ = self.emitter.send(WlMonitorEvent::ActionFailed {
+                    action: ActionKind::SetTransform,
+                    reason: format!(
+                        "Monitor '{}' is disabled, cannot set transform",
+                        name
+                    ),
+                });
+                continue;
+            }
+
+            let config_head = config.enable_head(&monitor.head, qh, ());
+            if let Some(ref current_mode) = monitor.current_mode {
+                config_head.set_mode(current_mode);
+            }
+            config_head.set_position(monitor.position.x, monitor.position.y);
+            config_head.set_transform(transform.to_wayland());
+            config_head.set_scale(monitor.scale);
         }
     }
 
@@ -387,9 +499,7 @@ impl WlMonitorManager {
                 config_head.set_mode(current_mode);
             }
             config_head.set_position(monitor.position.x, monitor.position.y);
-            if let WEnum::Value(t) = monitor.transform {
-                config_head.set_transform(t);
-            }
+            config_head.set_transform(monitor.transform.to_wayland());
             config_head.set_scale(monitor.scale);
         } else {
             config.disable_head(&monitor.head);
@@ -477,7 +587,7 @@ impl Dispatch<ZwlrOutputManagerV1, ()> for WlMonitorManager {
                         scale: 1.0,
                         enabled: false,
                         current_mode: None,
-                        transform: WEnum::Value(Transform::Normal),
+                        transform: WlTransform::Normal,
                         head,
                         changed: false,
                         last_mode: None,
@@ -583,7 +693,7 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for WlMonitorManager {
                 monitor.scale = scale;
             }
             zwlr_output_head_v1::Event::Transform { transform } => {
-                monitor.transform = transform;
+                monitor.transform = WlTransform::from_wayland(transform);
             }
             _ => {}
         }
