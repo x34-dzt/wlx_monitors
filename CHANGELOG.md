@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-02-16
+
+### Added
+
+- `WlMonitorAction::SetScale { name, scale }` - Set a monitor's scale factor
+- `WlMonitorAction::SetTransform { name, transform }` - Set a monitor's rotation/orientation
+- `WlTransform` enum - Custom transform type (Normal, Rotate90, Rotate180, Rotate270, Flipped, Flipped90, Flipped180, Flipped270) replacing wayland-client's `WEnum<Transform>` in the public API
+- `SetScale` and `SetTransform` variants in `ActionKind` for error reporting
+
+### Changed
+
+- Split `state.rs` into `state/mod.rs` and `state/actions.rs` for better code organization
+
 ## [0.1.3] - 2026-02-11
 
 ### Fixed

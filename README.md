@@ -22,7 +22,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wlx_monitors = "0.1.3"
+wlx_monitors = "0.1.4"
 ```
 
 Basic usage:
@@ -148,7 +148,7 @@ pub enum WlMonitorAction {
     Toggle { name: String, mode: Option<(i32, i32, i32)> },    // On/off with optional custom mode
     SwitchMode { name: String, width: i32, height: i32, refresh_rate: i32 },
     SetScale { name: String, scale: f64 },                      // Set scale factor
-    SetTransform { name: String, transform: Transform },        // Set rotation/flip
+    SetTransform { name: String, transform: WlTransform },       // Set rotation/flip
 }
 ```
 
@@ -168,7 +168,7 @@ Each `WlMonitor` provides:
 | `position` | `WlPosition` | Position in global coordinate space |
 | `scale` | `f64` | Scale factor (1.0, 1.5, 2.0, etc.) |
 | `modes` | `Vec<WlMonitorMode>` | Available display modes |
-| `transform` | `Transform` | Orientation (normal, rotated, flipped) |
+| `transform` | `WlTransform` | Orientation (normal, rotated, flipped) |
 
 ## Requirements
 
@@ -236,10 +236,10 @@ fn main() {
     }).unwrap();
 
     // Example: Rotate a monitor
-    use wlx_monitors::Transform;
+    use wlx_monitors::WlTransform;
     action_tx.send(WlMonitorAction::SetTransform {
         name: "DP-1".to_string(),
-        transform: Transform::Rotate90,
+        transform: WlTransform::Rotate90,
     }).unwrap();
 
     // Process events
