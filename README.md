@@ -23,7 +23,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wlx_monitors = "0.1.7"
+wlx_monitors = "0.1.8"
 ```
 
 Basic usage:
