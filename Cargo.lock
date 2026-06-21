@@ -240,7 +240,7 @@ dependencies = [
 
 [[package]]
 name = "wlx_monitors"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "rustix",
  "thiserror",
