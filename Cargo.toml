@@ -1,6 +1,6 @@
 [package]
 name = "wlx_monitors"
-version = "0.1.7"
+version = "0.1.9"
 edition = "2024"
 authors = ["x34-dzt"]
 description = "Wayland output manager using wlr-output-management protocol"
@@ -23,3 +23,4 @@ wayland-client = "0.31.12"
 wayland-protocols-wlr = {  version = "0.3.10", features = ["client"] }
 wayland-protocols = { version = "0.32.10", features = ["client"] }
 rustix = { version = "1", features = [ "event", "time" ] }
+thiserror = "2.0.18"

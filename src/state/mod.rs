@@ -10,6 +10,7 @@ use std::{
     },
 };
 
+use thiserror::Error;
 use wayland_client::{
     Connection, Dispatch, EventQueue, Proxy, QueueHandle, backend::ObjectId,
     protocol::wl_registry,
@@ -50,12 +51,11 @@ pub struct WlMonitorManager {
     config_result: ConfigResult,
 }
 
-/// Errors that can occur when using the monitor manager
-#[derive(Debug)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum WlMonitorManagerError {
-    /// Failed to establish Wayland connection
+    #[error("failed to connect to Wayland: {0}")]
     ConnectionError(String),
-    /// Error in the Wayland event queue
+    #[error("Wayland event queue error: {0}")]
     EventQueueError(String),
 }
 
@@ -181,6 +181,10 @@ impl WlMonitorManager {
             })?;
             self.flush_changed();
         }
+
+        // Also flush after result to ensure final state is emitted
+        self.flush_changed();
+
         match self.config_result {
             ConfigResult::Succeeded => Ok(()),
             ConfigResult::Failed => {
