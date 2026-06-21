@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use wayland_client::{
     WEnum, backend::ObjectId, protocol::wl_output::Transform,
 };
@@ -7,8 +9,9 @@ use wayland_protocols_wlr::output_management::v1::client::{
 };
 
 /// Monitor transform (rotation/flip)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WlTransform {
+    #[default]
     Normal,
     Rotate90,
     Rotate180,
@@ -17,6 +20,22 @@ pub enum WlTransform {
     Flipped90,
     Flipped180,
     Flipped270,
+}
+
+impl Display for WlTransform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            WlTransform::Normal => "normal",
+            WlTransform::Rotate90 => "rotate-90",
+            WlTransform::Rotate180 => "rotate-180",
+            WlTransform::Rotate270 => "rotate-270",
+            WlTransform::Flipped => "flipped",
+            WlTransform::Flipped90 => "flipped-90",
+            WlTransform::Flipped180 => "flipped-180",
+            WlTransform::Flipped270 => "flipped-270",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl WlTransform {

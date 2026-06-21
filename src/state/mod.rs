@@ -51,7 +51,7 @@ pub struct WlMonitorManager {
     config_result: ConfigResult,
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum WlMonitorManagerError {
     #[error("failed to connect to Wayland: {0}")]
     ConnectionError(String),
@@ -181,6 +181,10 @@ impl WlMonitorManager {
             })?;
             self.flush_changed();
         }
+
+        // Also flush after result to ensure final state is emitted
+        self.flush_changed();
+
         match self.config_result {
             ConfigResult::Succeeded => Ok(()),
             ConfigResult::Failed => {

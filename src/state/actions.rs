@@ -19,7 +19,7 @@ pub enum ActionKind {
 }
 
 /// Events emitted by the Wayland monitor manager
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum WlMonitorEvent {
     /// Sent once when the initial state is received, containing all connected monitors
     InitialState(Vec<WlMonitor>),
@@ -32,6 +32,7 @@ pub enum WlMonitorEvent {
 }
 
 /// Actions that can be sent to the monitor manager to control monitors
+#[derive(Debug, Clone)]
 pub enum WlMonitorAction {
     /// Toggle a monitor on/off by name
     Toggle {
